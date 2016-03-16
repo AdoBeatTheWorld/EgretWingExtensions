@@ -1,13 +1,46 @@
 import * as wing from 'wing';
 import * as path from 'path';
 import * as fs from 'fs';
-
+import {IStoreSchema,IStoreSchemaMap,IFormOptions,PopupType,Store} from 'wing';
 var parser = require('xml-parser');
 
 export function activate() {
 	wing.commands.registerCommand('extension.ExmlToClass', doExchange);
 }
-
+let schema:IStoreSchemaMap = {
+    checkbox:{
+        type : "boolean",
+        title : "生成getInstance",
+        default : true
+    },
+    checkbox1:{
+        type : "boolean",
+        title : "生成ChildrenCreated",
+        default : true
+    },
+    checkbox2:{
+        type : "boolean",
+        title : "生成measure",
+        default : true
+    },
+    checkbox3:{
+        type : "boolean",
+        title : "生成addToStage&removeFromStage handler",
+        default : true
+    },
+    inputbox:{
+        type :'string',
+        title : "Class 输出目录",
+        default : ""
+    }
+};
+let properties = {
+	inputbox: ""
+}
+var baseClass:string;
+var classComponents;
+var className:string;
+var skinName:string;
 function doExchange(){
     let e = wing.window.activeTextEditor;
     if( !e){
@@ -21,17 +54,26 @@ function doExchange(){
         wing.window.showErrorMessage("File is not exml");
         return;
     }
+    
     let content = e.document.getText();
     let xml = parser(content);
     let isEui = is_eui(content);
-    let baseClass = isEui ? "eui.Panel" : getHostComponent(xml);
-    let classComponents = parseSkinConponents(xml,isEui);
+    baseClass = isEui ? "eui.Panel" : getHostComponent(xml);
+    classComponents = parseSkinConponents(xml,isEui);
     let targetFileName = getTargetName(filename);
     let baseName = path.basename(targetFileName);
-    var className = baseName.split(".")[0];
-    var skinName = parseSkinname(filename);
-    let classContent = assemble(className,baseClass,skinName,classComponents);
-    fs.writeFileSync(targetFileName,classContent,{encoding:"utf-8"});
+    properties = {
+	   inputbox: targetFileName
+    };
+    className = baseName.split(".")[0];
+    skinName = parseSkinname(filename);
+    wing.window.showPopup<IFormOptions>(PopupType.Form, new Store(properties, schema),{
+        title : "输出设置"
+    }).then((result)=>{
+        let classContent = assemble(className,baseClass,skinName,classComponents,result.getProperties(true));
+        fs.writeFileSync(targetFileName,classContent,{encoding:"utf-8"});
+    })
+    
 }
 
 function parseSkinname(text:string) {
@@ -55,15 +97,27 @@ function parseSkinname(text:string) {
     }
     return result;
 }
-let contructorTemplate = "\tconstructor(){\r\t\tsuper();\r\t\tthis.skinName=\"{skinName}\";\r\t}"
-let variableTemplate = "\tpublic {varName}:{varType};\r";
-let partAddedMethodTemplate = "\tpublic partAdded(name:string, instance:any){\r\t\tsuper.partAdded(name, instance);\r{Variables}\r\t}";
-let firstPartTemplate = "\t\tif(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
-let normalPartTemplate = "else if(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
-function assemble(className,baseClass,skinName,classComponents) {
+const contructorTemplate = "\tconstructor(){\r\t\tsuper();\r\t\tthis.skinName=\"{skinName}\";\r\t{addHandler}\r\t}"
+const variableTemplate = "\tpublic {varName}:{varType};\r";
+const partAddedMethodTemplate = "\tpublic partAdded(name:string, instance:any){\r\t\tsuper.partAdded(name, instance);\r{Variables}\r\t}";
+const firstPartTemplate = "\t\tif(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
+const normalPartTemplate = "else if(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
+const singletonTemplate = "\r\tprivate static _instance:{className};\r\tpublic static getInstance():{className}{\r\t\tif({className}._instance == null){\r\t\t\t{className}._instance = new {className}();\r\t\t}\r\t\treturn {className}._instance;\r\t}";
+const childrenCreatedTemplate = "\r\tprivate childrenCreated(){\r\t\tsuper.childrenCreated();\r\t\t\/\/todo\r\t}\r";
+const measureTemplate = "\r\tprivate measure(){\r\t\tsuper.measure();\r\t\t\/\/todo\r\t}\r";
+const addHandlerTemplate = "\tthis.addEventListener(egret.Event.ADDED_TO_STAGE,this.onAdded, this );\r\t\tthis.addEventListener(egret.Event.REMOVED_FROM_STAGE, this.onRemoved, this);"
+const addStageTemplate = "\r\tprivate onAdded(evt:egret.Event){\r\t\t\/\/todo\r\t}\r\r\tprivate onRemoved(evt:egret.Event){\r\t\t\/\/todo\r\t}\r";
+function assemble(className,baseClass,skinName,classComponents,settings) {
+    var tempString;
     var classContent = "class "+className+" extends "+baseClass+"{\r";
     //constructor
     classContent += contructorTemplate.replace("{skinName}",skinName);
+    if(  settings["checkbox3"] ){
+        classContent = classContent.replace("{addHandler}",addHandlerTemplate);
+        classContent+=addStageTemplate;
+    }else{
+        classContent = classContent.replace("{addHandler}","");
+    }
     var len = classComponents.length;
     var component;
     var componentName:string;
@@ -84,6 +138,19 @@ function assemble(className,baseClass,skinName,classComponents) {
     }
     classContent += "\r"+variables;
     classContent += partAddedMethodTemplate.replace("{Variables}",partAddContent);
+    if( settings["checkbox1"] ){
+        classContent+=childrenCreatedTemplate;
+    }
+    if( settings["checkbox2"] ){
+        classContent+=measureTemplate;
+    }
+    if( settings["checkbox"] ){
+        tempString = singletonTemplate;
+        while(tempString.indexOf("{className}")!=-1){
+            tempString = tempString.replace("{className}",className);
+        }
+        classContent+=tempString;
+    }
     classContent+="\r}";
     return classContent;
 }

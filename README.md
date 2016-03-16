@@ -1,2 +1,2 @@
 # ExmlToClass
-egret exml to class extension
+Egret Extension build exml to gui/eui class
