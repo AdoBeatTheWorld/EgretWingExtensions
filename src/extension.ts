@@ -103,8 +103,8 @@ const partAddedMethodTemplate = "\tpublic partAdded(name:string, instance:any){\
 const firstPartTemplate = "\t\tif(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
 const normalPartTemplate = "else if(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
 const singletonTemplate = "\r\tprivate static _instance:{className};\r\tpublic static getInstance():{className}{\r\t\tif({className}._instance == null){\r\t\t\t{className}._instance = new {className}();\r\t\t}\r\t\treturn {className}._instance;\r\t}";
-const childrenCreatedTemplate = "\r\tprivate childrenCreated(){\r\t\tsuper.childrenCreated();\r\t\t\/\/todo\r\t}\r";
-const measureTemplate = "\r\tprivate measure(){\r\t\tsuper.measure();\r\t\t\/\/todo\r\t}\r";
+const childrenCreatedTemplate = "\r\tpublic childrenCreated(){\r\t\tsuper.childrenCreated();\r\t\t\/\/todo\r\t}\r";
+const measureTemplate = "\r\tpublic measure(){\r\t\tsuper.measure();\r\t\t\/\/todo\r\t}\r";
 const addHandlerTemplate = "\tthis.addEventListener(egret.Event.ADDED_TO_STAGE,this.onAdded, this );\r\t\tthis.addEventListener(egret.Event.REMOVED_FROM_STAGE, this.onRemoved, this);"
 const addStageTemplate = "\r\tprivate onAdded(evt:egret.Event){\r\t\t\/\/todo\r\t}\r\r\tprivate onRemoved(evt:egret.Event){\r\t\t\/\/todo\r\t}\r";
 function assemble(className,baseClass,skinName,classComponents,settings) {
@@ -154,28 +154,37 @@ function assemble(className,baseClass,skinName,classComponents,settings) {
     classContent+="\r}";
     return classContent;
 }
-
+let ignoreTypes = ["e:states","w:Declarations","w:HostComponent"];
 function parseSkinConponents(content,isEui) {
     var arr = content.root.children;
     var len = arr.length;
     var component;
-    var ignoreTypes = ["e:states","w:Declarations","w:HostComponent"];
+    
     var typePreFix:string = isEui ? "eui." : "egret.gui.";
-    var componentType:string;
-    var componentName:string;
     var result = [];
     for(var i = 0; i < len; i++){
-        component = arr[i];
-        if(!component.attributes["id"]) continue;
-        
-        componentName = component.name;
+        parseComponent(arr[i], result,typePreFix);
+    }
+    return result;
+}
+
+function parseComponent(component, targetArr,typePreFix) {
+    if(component.attributes["id"]){
+        var componentType:string;
+        var componentName = component.name;
         if (ignoreTypes.indexOf(componentName)==-1) {
             componentType = typePreFix + componentName.split(":")[1];
             componentName = component.attributes["id"];
-            result.push([componentType, componentName]);
+            targetArr.push([componentType, componentName]);
         }
     }
-    return result;
+    var arr = component.children;
+    var len = arr.length;
+    if( len != 0){
+        for(var i = 0; i < len; i++){
+            parseComponent(arr[i], targetArr,typePreFix);
+        }
+    }
 }
 
 function getHostComponent(content) {

@@ -2,7 +2,7 @@
   "name": "exml2class",
   "displayName": "Extension",
   "description": "An Extension translate exml to class.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "adodo08",
   "engines": {
     "wing": "^3.0.0"
