@@ -83,7 +83,7 @@ function parseNS(content) {
     for(var key in content.root.attributes){
         if( key.indexOf("xmlns:") == 0 && ["xmlns:w","xmlns:e"].indexOf(key) == -1){
             tempArr = key.split(":");
-            namespaces[tempArr[1]] = content.root.attributes[key].replace("*","");
+            namespaces[tempArr[1]] = content.root.attributes[key];
         }
     }
 }
@@ -210,7 +210,7 @@ function parseComponentType(componentName:string,defaultTypePreFix:string) : str
         return defaultTypePreFix+tempArr[1];
     }
     if( namespaces[tempArr[0]]){
-        return namespaces[tempArr[0]]+tempArr[1];
+        return namespaces[tempArr[0]].replace("*",tempArr[1]);
     }
     return componentName;
 }
