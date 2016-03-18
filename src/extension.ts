@@ -41,6 +41,7 @@ var baseClass:string;
 var classComponents;
 var className:string;
 var skinName:string;
+var namespaces = {};
 function doExchange(){
     let e = wing.window.activeTextEditor;
     if( !e){
@@ -59,6 +60,7 @@ function doExchange(){
     let xml = parser(content);
     let isEui = is_eui(content);
     baseClass = isEui ? "eui.Panel" : getHostComponent(xml);
+    parseNS(xml);
     classComponents = parseSkinConponents(xml,isEui);
     let targetFileName = getTargetName(filename);
     let baseName = path.basename(targetFileName);
@@ -74,6 +76,16 @@ function doExchange(){
         fs.writeFileSync(targetFileName,classContent,{encoding:"utf-8"});
     })
     
+}
+
+function parseNS(content) {
+    var tempArr;
+    for(var key in content.root.attributes){
+        if( key.indexOf("xmlns:") == 0 && ["xmlns:w","xmlns:e"].indexOf(key) == -1){
+            tempArr = key.split(":");
+            namespaces[tempArr[1]] = content.root.attributes[key].replace("*","");
+        }
+    }
 }
 
 function parseSkinname(text:string) {
@@ -172,8 +184,10 @@ function parseComponent(component, targetArr,typePreFix) {
     if(component.attributes["id"]){
         var componentType:string;
         var componentName = component.name;
-        if (ignoreTypes.indexOf(componentName)==-1) {
-            componentType = typePreFix + componentName.split(":")[1];
+        if (ignoreTypes.indexOf(componentName)==-1) {   
+            
+            //componentType = typePreFix + componentName.split(":")[1];
+            componentType = parseComponentType(componentName,typePreFix)
             componentName = component.attributes["id"];
             targetArr.push([componentType, componentName]);
         }
@@ -185,6 +199,20 @@ function parseComponent(component, targetArr,typePreFix) {
             parseComponent(arr[i], targetArr,typePreFix);
         }
     }
+}
+
+function parseComponentType(componentName:string,defaultTypePreFix:string) : string{
+    var tempArr = componentName.split(":");
+    if( tempArr.length != 2){
+        return componentName;
+    }
+    if( tempArr[0] == "e"){
+        return defaultTypePreFix+tempArr[1];
+    }
+    if( namespaces[tempArr[0]]){
+        return namespaces[tempArr[0]]+tempArr[1];
+    }
+    return componentName;
 }
 
 function getHostComponent(content) {
