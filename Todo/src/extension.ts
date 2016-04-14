@@ -11,6 +11,8 @@ export function activate() {
 	wing.commands.registerCommand('extension.todo', run);
 }
 let localStorage;
+let totalfiles = 0;
+let finishedfiles = 0;
 function run() {
 	project_path = wing.workspace.rootPath;
 	source_path = project_path +"\\src"
@@ -55,6 +57,7 @@ function loopDir(dirpath) {
 }
 
 function checkFile(filepath) {
+	totalfiles++;
 	var lineReader = require('readline').createInterface({
 		input: fs.createReadStream(filepath)
 	});
@@ -73,6 +76,9 @@ function checkFile(filepath) {
 			localStorage[filepath].push({line:lineIndex,todo:todoContent});
 		}
 		lineIndex++;
+	}).on('end' function(params:type) {
+		finishedfiles++;
+		console.log(finishedfiles+'/'+totalfiles);
 	});
 	/**
 	fs.readFile(filepath,function (err, result) {

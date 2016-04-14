@@ -1,7 +1,7 @@
 {
-  "name": "extensiondemo",
-  "displayName": "ExtensionDemo",
-  "description": "An Extension Demo For Egret Wing.",
+  "name": "mapedit",
+  "displayName": "MapEditPlugin",
+  "description": "Self Use Only",
   "version": "0.0.1",
   "publisher": "egret",
   "engines": {
@@ -11,25 +11,29 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.todo"
+    "onCommand:mapedit.generate"
   ],
   "main": "./out/src/extension",
   "contributes": {
     "commands": [
       {
-        "command": "extension.todo",
-        "title": "TODOLIST"
+        "command": "mapedit.generate",
+        "title": "MapEditPlugin"
       }
     ]
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/egret-labs/wing-extensions.git"
   },
   "scripts": {
     "wing:prepublish": "node ./node_modules/egretwing/bin/compile",
     "compile": "node ./node_modules/egretwing/bin/compile -watch -p ./",
     "postinstall": "node ./node_modules/egretwing/bin/install"
   },
-  "dependencies" : {
-    "node-localstorage":"1.1.2",
-    "async":"1.5.2"
+  "dependencies":{
+    "xml-parser": "^1.2.1"
   },
   "devDependencies": {
     "egretwing": "^3.0.0",
