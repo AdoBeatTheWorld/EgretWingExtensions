@@ -2,17 +2,17 @@ import * as wing from 'wing';
 import * as fs from 'fs';
 import * as path from 'path';
 
-let readline = require('readline');
+var readline = require('readline');
+var async = require('async');
 
 var project_path = "";//current project name
 let source_path;
 let todo_path;
+
 export function activate() {
 	wing.commands.registerCommand('extension.todo', run);
 }
 let localStorage;
-let totalfiles = 0;
-let finishedfiles = 0;
 function run() {
 	project_path = wing.workspace.rootPath;
 	source_path = project_path +"\\src"
@@ -25,16 +25,19 @@ function run() {
 			localStorage = {};
 		}
 		initLoop();
-		fs.writeFileSync(todo_path,JSON.stringify(localStorage),{encoding:'utf-8'});
-		wing.window.showInformationMessage('TodoList refreshed');
 	});
 }
 
+function saveTodo() {
+	fs.writeFileSync(todo_path,JSON.stringify(localStorage),{encoding:'utf-8'});
+	wing.window.showInformationMessage('TodoList refreshed');
+}
 
 function initLoop() {
 	loopDir(source_path);
 }
-
+var totalFiles = 0;
+var finishedFiles = 0;
 function loopDir(dirpath) {
 	fs.readdir(dirpath,function(err,result) {
 		if( err ){
@@ -44,48 +47,56 @@ function loopDir(dirpath) {
 		var len = result.length;
 		var element;
 		var temppath;
-		for (var i = 0; i < len; i++) {
-			element = result[i];
+		async.each(result, function(element, callback){
 			temppath = path.join(dirpath,element);
 			if( fs.statSync(temppath).isDirectory()){
 				loopDir(temppath);
 			}else{
 				checkFile(temppath);
 			}
-		}
+		})
 	})
 }
 
 function checkFile(filepath) {
-	totalfiles++;
-	var lineReader = require('readline').createInterface({
-		input: fs.createReadStream(filepath)
-	});
+	totalFiles++;
 	var lowline:string;
 	var index;
 	var todoContent;
-	var lineIndex = 0;
-	lineReader.on('line',function(line){
-		lowline = line.toLowerCase().trim();
-		index = lowline.indexOf("//todo");
-		if( index != -1){
-			todoContent = lowline.substr(index+6);
-			if(localStorage[filepath] == null){
-				localStorage[filepath] = [];
-			}
-			localStorage[filepath].push({line:lineIndex,todo:todoContent});
-		}
-		lineIndex++;
-	}).on('end' function(params:type) {
-		finishedfiles++;
-		console.log(finishedfiles+'/'+totalfiles);
-	});
-	/**
-	fs.readFile(filepath,function (err, result) {
-		if(err){
-			wing.window.showErrorMessage(err.message);
+	fs.readFile(filepath,'utf8',function(err, data) {
+		if( err != null){
+			console.error(err);
 			return;
 		}
+		var content = <string>data;
+		var lines = content.split('\r\n');
+		var line:string;
+		var len = lines.length;
+		for(var i = 0; i < len; i++){
+			line = lines[i];
+			lowline = line.toLowerCase().trim();
+			index = lowline.indexOf("//todo");
+			if( index != -1){
+				todoContent = line.substr(index+6);
+				if(localStorage[filepath] == null){
+					localStorage[filepath] = [];
+				}
+				localStorage[filepath].push({line:i,todo:todoContent});
+			}
+			
+			index = lowline.indexOf("//fixme");
+			if( index != -1){
+				todoContent = line.substr(index+6);
+				if(localStorage[filepath] == null){
+					localStorage[filepath] = [];
+				}
+				localStorage[filepath].push({line:i,todo:todoContent});
+			}
+		}
+		finishedFiles++;
+		console.log(finishedFiles+"/"+totalFiles);
+		if( finishedFiles == totalFiles){
+			saveTodo();
+		}
 	});
-	*/
 }

@@ -1,6 +1,6 @@
 {
-  "name": "extensiondemo",
-  "displayName": "ExtensionDemo",
+  "name": "todo",
+  "displayName": "ToDo",
   "description": "An Extension Demo For Egret Wing.",
   "version": "0.0.1",
   "publisher": "egret",
@@ -18,7 +18,7 @@
     "commands": [
       {
         "command": "extension.todo",
-        "title": "TODOLIST"
+        "title": "Todo"
       }
     ]
   },
