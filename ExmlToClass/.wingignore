@@ -4,5 +4,7 @@ out/test/**
 test/**
 src/**
 **/*.map
+**/*.ts
+node_modules/**
 .gitignore
 tsconfig.json

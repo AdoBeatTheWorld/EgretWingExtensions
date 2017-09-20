@@ -4,8 +4,9 @@ import * as fs from 'fs';
 import {IStoreSchema,IStoreSchemaMap,IFormOptions,PopupType,Store} from 'wing';
 var parser = require('xml-parser');
 
-export function activate() {
+export function activate(context: wing.ExtensionContext) {
 	wing.commands.registerCommand('extension.ExmlToClass', doExchange);
+	// console.log('regist exmaltoclass');
 }
 let schema:IStoreSchemaMap = {
     checkbox:{
@@ -16,11 +17,6 @@ let schema:IStoreSchemaMap = {
     checkbox1:{
         type : "boolean",
         title : "生成ChildrenCreated",
-        default : true
-    },
-    checkbox2:{
-        type : "boolean",
-        title : "生成measure",
         default : true
     },
     checkbox3:{
@@ -59,7 +55,7 @@ function doExchange(){
     let content = e.document.getText();
     let xml = parser(content);
     let isEui = is_eui(content);
-    baseClass = isEui ? "eui.Panel" : getHostComponent(xml);
+    baseClass = isEui ? "eui.Component" : getHostComponent(xml);
     parseNS(xml);
     classComponents = parseSkinConponents(xml,isEui);
     let targetFileName = getTargetName(filename);
@@ -68,12 +64,14 @@ function doExchange(){
 	   inputbox: targetFileName
     };
     className = baseName.split(".")[0];
-    skinName = parseSkinname(filename);
+    //skinName = parseSkinname(filename);
     wing.window.showPopup<IFormOptions>(PopupType.Form, new Store(properties, schema),{
         title : "输出设置"
     }).then((result)=>{
-        let classContent = assemble(className,baseClass,skinName,classComponents,result.getProperties(true));
-        fs.writeFileSync(targetFileName,classContent,{encoding:"utf-8"});
+        let settings = result.getProperties(true);
+        let classContent = assemble(className,baseClass,skinName,classComponents,settings);
+        fs.writeFileSync(settings["inputbox"],classContent,{encoding:"utf-8"});
+        wing.window.showInformationMessage('生成成功:'+settings["inputbox"]);
     })
     
 }
@@ -81,9 +79,12 @@ function doExchange(){
 function parseNS(content) {
     var tempArr;
     for(var key in content.root.attributes){
+        // console.log(key ,content.root.attributes[key]);
         if( key.indexOf("xmlns:") == 0 && ["xmlns:w","xmlns:e"].indexOf(key) == -1){
             tempArr = key.split(":");
             namespaces[tempArr[1]] = content.root.attributes[key];
+        }if( key == "class"){
+            skinName = content.root.attributes[key];
         }
     }
 }
@@ -109,61 +110,55 @@ function parseSkinname(text:string) {
     }
     return result;
 }
-const contructorTemplate = "\tconstructor(){\r\t\tsuper();\r\t\tthis.skinName=\"{skinName}\";\r\t{addHandler}\r\t}"
-const variableTemplate = "\tpublic {varName}:{varType};\r";
-const partAddedMethodTemplate = "\tpublic partAdded(name:string, instance:any){\r\t\tsuper.partAdded(name, instance);\r{Variables}\r\t}";
-const firstPartTemplate = "\t\tif(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
-const normalPartTemplate = "else if(name == \"{varName}\"){\r\t\t\tthis.{varName}=instance;\r\t\t}";
-const singletonTemplate = "\r\tprivate static _instance:{className};\r\tpublic static getInstance():{className}{\r\t\tif({className}._instance == null){\r\t\t\t{className}._instance = new {className}();\r\t\t}\r\t\treturn {className}._instance;\r\t}";
-const childrenCreatedTemplate = "\r\tpublic childrenCreated(){\r\t\tsuper.childrenCreated();\r\t\t\/\/todo\r\t}\r";
-const measureTemplate = "\r\tpublic measure(){\r\t\tsuper.measure();\r\t\t\/\/todo\r\t}\r";
-const addHandlerTemplate = "\tthis.addEventListener(egret.Event.ADDED_TO_STAGE,this.onAdded, this );\r\t\tthis.addEventListener(egret.Event.REMOVED_FROM_STAGE, this.onRemoved, this);"
-const addStageTemplate = "\r\tprivate onAdded(evt:egret.Event){\r\t\t\/\/todo\r\t}\r\r\tprivate onRemoved(evt:egret.Event){\r\t\t\/\/todo\r\t}\r";
+const viewTemplate:any = require('./view');
+const classTemplate = viewTemplate.classTemplate;
+const contructorTemplate = viewTemplate.contructorTemplate;
+const variableTemplate = viewTemplate.variableTemplate;
+const singletonTemplate = viewTemplate.singletonTemplate;
+const childrenCreatedTemplate = viewTemplate.childrenCreatedTemplate;
+const addHandlerTemplate = viewTemplate.addHandlerTemplate;
+const addStageTemplate = viewTemplate.addStageTemplate;
 function assemble(className,baseClass,skinName,classComponents,settings) {
-    var tempString;
-    var classContent = "class "+className+" extends "+baseClass+"{\r";
+    let tempString:string;
+    className = settings["inputbox"];
+    if( className.indexOf("\\")!=-1)
+        className = className.substr(className.lastIndexOf("\\")+1);
+    if( className.indexOf(".")!=-1)
+        className = className.split(".")[0];
+    let classContent = classTemplate.replace('{modulename}',className).replace('{baseClass}',baseClass);//"class "+className+" extends "+baseClass+"{\r";
     //constructor
-    classContent += contructorTemplate.replace("{skinName}",skinName);
+    classContent = classContent.replace("{skinName}",skinName);
     if(  settings["checkbox3"] ){
         classContent = classContent.replace("{addHandler}",addHandlerTemplate);
-        classContent+=addStageTemplate;
+        classContent = classContent.replace("{addStage}",addStageTemplate);
     }else{
         classContent = classContent.replace("{addHandler}","");
+         classContent = classContent.replace("{addStage}","");
     }
     var len = classComponents.length;
     var component;
     var componentName:string;
     var componentType:string;
-    var variables:string;
-    var partAddContent:string;
+    var variables:string = "";
     for(var i = 0; i < len; i++){
         component = classComponents[i];
         componentType = component[0];
         componentName = component[1];
-        if( i != 0){
-            variables += variableTemplate.replace("{varName}",componentName).replace("{varType}",componentType);
-            partAddContent += normalPartTemplate.replace("{varName}",componentName).replace("{varName}",componentName);
-        }else{
-            variables = variableTemplate.replace("{varName}",componentName).replace("{varType}",componentType);
-            partAddContent = firstPartTemplate.replace("{varName}",componentName).replace("{varName}",componentName);
-        }
+        variables += variableTemplate.replace("{varName}",componentName).replace("{varType}",componentType);
     }
-    classContent += "\r"+variables;
-    classContent += partAddedMethodTemplate.replace("{Variables}",partAddContent);
+
+    classContent = classContent.replace("{components}",variables);
     if( settings["checkbox1"] ){
-        classContent+=childrenCreatedTemplate;
-    }
-    if( settings["checkbox2"] ){
-        classContent+=measureTemplate;
+        classContent = classContent.replace("{childrenCreated}",childrenCreatedTemplate);
     }
     if( settings["checkbox"] ){
         tempString = singletonTemplate;
         while(tempString.indexOf("{className}")!=-1){
             tempString = tempString.replace("{className}",className);
         }
-        classContent+=tempString;
+        classContent = classContent.replace("{Instance}",tempString);
     }
-    classContent+="\r}";
+    // classContent+="\r}";
     return classContent;
 }
 let ignoreTypes = ["e:states","w:Declarations","w:HostComponent"];

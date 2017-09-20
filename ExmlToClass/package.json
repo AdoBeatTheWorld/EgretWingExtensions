@@ -2,27 +2,37 @@
   "name": "exml2class",
   "displayName": "Extension",
   "description": "An Extension translate exml to class.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "adodo08",
-  "engines": {
-    "wing": "^3.0.0"
-  },
   "categories": [
     "Other"
   ],
+  
+  "icon": "images/icon.svg",
+  "bugs": {
+    "url": "https://github.com/AdoBeatTheWorld/EgretWingExtensions/issues"
+  },
+  "homepage": "https://github.com/AdoBeatTheWorld/EgretWingExtensions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/egret-labs/wing-extensions.git"
+  },
+  "license": "MIT",
   "activationEvents": [
     "onCommand:extension.ExmlToClass"
   ],
-  "main": "./out/src/extension",
-  "repository": {
-        "type": "git",
-        "url": "https://github.com/AdoBeatTheWorld/ExmlToClass.git"
-    },
+"engines": {
+    "wing": "^3.0.4"
+  },	
+"main": "./out/extension",
   "contributes": {
     "commands": [
       {
         "command": "extension.ExmlToClass",
-        "title": "ExmlToClass"
+        "title": "ExmlToClass",
+	      "key": "alt+q",
+        "mac": "cmd+shift+q",
+        "when": "editorTextFocus"
       }
     ]
   },
@@ -35,7 +45,7 @@
 		"xml-parser": "^1.2.1"
     },
   "devDependencies": {
-    "egretwing": "^3.0.0",
+    "egretwing": "^3.0.4",
     "typescript": "^1.7.5"
   }
 }
