@@ -2,11 +2,15 @@ import * as wing from 'wing';
 import * as path from 'path';
 import * as fs from 'fs';
 import {IStoreSchema,IStoreSchemaMap,IFormOptions,PopupType,Store} from 'wing';
-var parser = require('xml-parser');
+// var parser = require('xml-parser');
+import * as parser from 'xml-parser';
 
 export function activate(context: wing.ExtensionContext) {
 	wing.commands.registerCommand('extension.ExmlToClass', doExchange);
-	// console.log('regist exmaltoclass');
+	wing.window.showInformationMessage('extension.ExmlToClass is activated');
+}
+export function deactivate() {
+	console.log('extension.ExmlToClass is deactivated');
 }
 let schema:IStoreSchemaMap = {
     checkbox:{

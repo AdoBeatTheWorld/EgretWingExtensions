@@ -1,6 +1,6 @@
 # EgretWingExtensions
 
-##ExmlToClass
+## ExmlToClass
 ---------------------  
 Wing插件，用来生成gui或者eui对应的类定义  
 * 节省声明和检查的时间  
@@ -11,7 +11,7 @@ Wing插件，用来生成gui或者eui对应的类定义
 * partAdded，measure等方法  
 目前版本 1.0.3  
 
-##TODO  
+## TODO  
 ---------------------
 Wing插件，用来管理每日的任务列表，
 第一期：读取和展示todo与fixme列表，并存放本地  
