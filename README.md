@@ -1,4 +1,5 @@
 # EgretWingExtensions
+## 此插件目前第三方库有问题，已停止维护
 
 ## ExmlToClass
 ---------------------  
